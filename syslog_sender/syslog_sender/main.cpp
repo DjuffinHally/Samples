@@ -48,7 +48,7 @@ typedef struct udp_hdr
 
 /*****************************************************************/
 
-int sendLog(char *ip_dst, char *ip_src, int udp_port, char *event)
+int sendLog(char *ip_dst, char *ip_src, int udp_port, char *data)
 //int main()
 {
 	struct sockaddr_in remote;
@@ -64,8 +64,8 @@ int sendLog(char *ip_dst, char *ip_src, int udp_port, char *event)
 	//char *ip_src = "192.168.66.7";
 	//int udp_port = 514;
 
-	char *data = (char *) calloc(strlen(event), sizeof(char) + 1);
-	strcpy(data, event);
+	//char *data = (char *) calloc(strlen(event), sizeof(char) + 1);
+	//strcpy(data, event);
 	int res;
 
 	WSADATA wsaData;
@@ -140,7 +140,7 @@ int sendLog(char *ip_dst, char *ip_src, int udp_port, char *event)
 				remote.sin_addr.s_addr = inet_addr(ip_dst);
 				res = NULL;
 				res = sendto(sckt, buf, iTotalSize, 0, (SOCKADDR *)&remote, sizeof(remote));
-				free(data);
+				//free(data);
 				if (res == SOCKET_ERROR) 
 				{ 
 					res = WSAGetLastError();
@@ -176,14 +176,156 @@ int sendLog(char *ip_dst, char *ip_src, char *event)
 	else { return 0; }
 }
 
+char *findPrio(char *event)
+{
+	char *first = "<";
+	char *second = ">";
+	if (*event == *first)
+	{
+		for (int i = 0; i <= strlen(event); i++)
+		{
+			if (*(event + i) == *second)
+			{
+				char *pprio = event;
+				//printf("0x%h\n", pprio);
+				return pprio;
+			}
+		}
+	}
+	else 
+	{
+		return NULL;
+	}
+}
+
+char *findDate(char *event)
+{
+	char *first[12] = { "Jan", "Fed", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+	for (int i = 0; i <= 25; i++) //Event's char
+	{
+		for (int j = 0; j <=11; j++) //Month number
+		{
+			BOOL flag = FALSE;
+			for (int k = 0; k <= 2; k++) //Month's char
+			{
+				if (*(event + i + k) == *(first[j] + k))
+				{
+					flag = TRUE;
+				}
+				else
+				{
+					flag = FALSE;
+					break;
+				}
+			}
+			if (flag)
+			{
+				char *pdate = event + i;
+				//printf("0x%h\n", pdate);
+				return pdate;
+			}
+		}
+	}
+	return NULL;
+}
+
+/*
+char *findDelimiter(char *event)
+{
+	char *first = ":";
+	if (*event == *first)
+	{
+		for (int i = 0; i <= strlen(event); i++)
+		{
+			if (*(event + i) == *second)
+			{
+				char *pprio = event;
+				//printf("0x%h\n", pprio);
+				return pprio;
+			}
+		}
+	}
+	else
+	{
+		return NULL;
+	}
+}
+*/
+
+char *parseString(char *event) 
+{
+	char *pprio = findPrio(event);
+	char *pdate = findDate(event);
+
+	
+	BOOL timestamp = FALSE;
+
+	
+	return 0;
+}
+
+void help(int error)
+{
+	char *help;
+	if (error == 1)
+	{
+		help ="Error: port out of range\n";
+	}
+	else 
+	{
+		help =
+			"usage:\n"
+			"       syslog_sender dst_addr src_addr [udp_port] message\n"
+			"       514 is default port.\n";
+	}
+	printf("%s", help);
+}
+
+void help()
+{
+	help(999);
+}
+
 int main(int argc, char *argv[])
 {
+	char *src;
+	char *dst;
+	int port;
+	char *msg;
+	/*
 	char *src = "192.168.55.71";
 	char *dst = "127.0.0.1";
 	int port = 514;
 	char *msg = "May 27 14:17:50 : %ASA-4-106023: Deny tcp src SIEM_VLAN55:192.168.55.1/61872 dst outside:173.194.73.102/443 by access-group \"SIEM_(VLAN55)_access_in\" [0x0, 0x0]";
+	*/
 
-	sendLog(dst, src, port, msg);
+	if (argc == 4) 
+	{
+		dst = argv[1];
+		src = argv[2];
+		msg = argv[argc - 1];
+		parseString(msg);
+		sendLog(dst, src, msg);
+	}
+	else if (argc == 5)
+	{
+		dst = argv[1];
+		src = argv[2];
+		port = (unsigned __int16)argv[3];
+		if (port > 65535)
+		{
+			help(1);
+			return 1;
+		}
+		msg = argv[argc - 1];
+		sendLog(dst, src, port, msg);
+	}
+	else
+	{
+		help();
+	}
+
+	//sendLog(dst, src, port, msg);
 	//sendLog(dst, src, msg);
 	return 0;
 }
